@@ -64,7 +64,7 @@ while t < t_end:
     # Store additional variables
     P_m_stored.append(ps.gen['GEN'].P_m(x, v).copy())
     P_e_stored.append(ps.gen['GEN'].P_e(x, v).copy())
-    E_f_stored.append(ps.gen['GEN'].e_f(x, v).copy())
+    E_f_stored.append(ps.gen['GEN'].E_f(x, v).copy())
     e_st_stored.append(ps.gen['GEN'].e_st(x, v).copy())
     e_t_stored.append(ps.gen['GEN'].e_t(x, v).copy())
     v_stored.append(ps.gen['GEN'].v_t(x, v).copy())
