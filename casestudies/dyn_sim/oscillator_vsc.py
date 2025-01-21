@@ -8,7 +8,7 @@ import importlib
 importlib.reload(dps)
 
 # region Model loading and initialisation stage
-from src.ps_models import one_vsc_ib as model_data
+from casestudies.ps_data import one_vsc_ib as model_data
 model = model_data.load()
 ps = dps.PowerSystemModel(model=model)  # Load into a PowerSystemModel object
 

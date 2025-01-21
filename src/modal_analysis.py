@@ -239,7 +239,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import src.plotting as dps_plt
     import src.dynamic as dps
-    import src.ps_models.k2a as model_data
+    import casestudies.ps_data.k2a as model_data
 
     import importlib
     importlib.reload(dps)

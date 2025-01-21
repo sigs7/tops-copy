@@ -8,7 +8,7 @@ import src.solvers as dps_sol
 if __name__ == '__main__':
 
     # Load model
-    import src.ps_models.ieee39 as model_data
+    import casestudies.ps_data.ieee39 as model_data
     model = model_data.load()
 
     # Power system model

@@ -10,7 +10,7 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # Load model
-    import src.ps_models.k2a as model_data
+    import casestudies.ps_data.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
 

@@ -9,7 +9,7 @@ importlib.reload(dps)
 from src.anim import Player
 
 # region Model loading and initialisation stage
-from src.ps_models import assignment_model as model_data
+from casestudies.ps_data import assignment_model as model_data
 model = model_data.load()
 ps = dps.PowerSystemModel(model=model)  # Load into a PowerSystemModel object
 
