@@ -2,8 +2,8 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import tops.dynamic as dps
-import tops.solvers as dps_sol
+import src.dynamic as dps
+import src.solvers as dps_sol
 import importlib
 importlib.reload(dps)
 
@@ -11,7 +11,7 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # region Model loading and initialisation stage
-    import tops.ps_models.k2a_unregulated as model_data
+    import src.ps_models.k2a_unregulated as model_data
     model = model_data.load()
     ps = dps.PowerSystemModel(model=model)  # Load into a PowerSystemModel object
 

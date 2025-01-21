@@ -1,5 +1,5 @@
-from tops.dyn_models.blocks import *
-from tops.dyn_models.utils import auto_init
+from src.dyn_models.blocks import *
+from src.dyn_models.utils import auto_init
 
 
 class AVR:

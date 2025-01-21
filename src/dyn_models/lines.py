@@ -1,6 +1,6 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
-from tops.utility_functions import lookup_strings
+from src.dyn_models.utils import DAEModel
+from src.utility_functions import lookup_strings
 from scipy.sparse import lil_matrix
 
 

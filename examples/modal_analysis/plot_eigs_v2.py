@@ -1,12 +1,12 @@
-import tops.dynamic as dps
-import tops.modal_analysis as dps_mdl
-import tops.plotting as dps_plt
+import src.dynamic as dps
+import src.modal_analysis as dps_mdl
+import src.plotting as dps_plt
 import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    import tops.ps_models.k2a as model_data
+    import src.ps_models.k2a as model_data
     model = model_data.load()
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()

@@ -1,5 +1,5 @@
 import numpy as np
-import tops.utility_functions as utils
+import src.utility_functions as utils
 
 
 class PowerSystemModelLinearization:
@@ -237,9 +237,9 @@ class PowerSystemModelLinearization:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    import tops.plotting as dps_plt
-    import tops.dynamic as dps
-    import tops.ps_models.k2a as model_data
+    import src.plotting as dps_plt
+    import src.dynamic as dps
+    import src.ps_models.k2a as model_data
 
     import importlib
     importlib.reload(dps)

@@ -2,13 +2,13 @@ import sys
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import time
-import tops.dynamic as dps
-import tops.solvers as dps_sol
+import src.dynamic as dps
+import src.solvers as dps_sol
 
 if __name__ == '__main__':
 
     # Load model
-    import tops.ps_models.ieee39 as model_data
+    import src.ps_models.ieee39 as model_data
     model = model_data.load()
 
     # Power system model
@@ -33,11 +33,38 @@ if __name__ == '__main__':
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
-        # Short circuit
-        if t >= 1 and t <= 1.05:
-            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
-        else:
-            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
+        ################  Assignment 3 / 4: Simulation of short-circuit  ################
+
+        #if (...):
+        #    ps.y_bus_red_mod[ , ] =
+        #else:
+        #    ps.y_bus_red_mod[ , ] =
+
+        ##'y_bus_red_mod' refers to the fault admittance, the inverse of fault impedance.
+        ##Fault: impedance = zero --> admittance = ?
+
+        ##[0, 0]: corresponds to 'B1' (generator bus).
+        ##[1, 1]: corresponds to 'B2' (load bus).
+        ##[2, 2]: corresponds to 'B3' (stiff network).
+
+        #################################################################################
+
+        #####  Assignment 5/6: Short-circuit with line disconnection & reconnection #####
+
+        #if (...) and (...):
+        #   (...)
+        #   ps.y_bus_red_mod[ , ] =
+
+        #if (...) and (...):
+        #    (...)
+        #    ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
+        #    ps.y_bus_red_mod[ , ] =
+
+        #if (...) and (...):
+        #    (...)
+        #    ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'connect')
+
+        #################################################################################
 
         # Simulate next step
         result = sol.step()

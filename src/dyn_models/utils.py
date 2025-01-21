@@ -1,7 +1,7 @@
 import numpy as np
 import inspect
 import functools
-import tops.utility_functions as dps_uf
+import src.utility_functions as dps_uf
 from scipy.optimize import least_squares
 
 

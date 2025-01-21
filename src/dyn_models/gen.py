@@ -1,6 +1,6 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
-import tops.utility_functions as dps_uf
+from src.dyn_models.utils import DAEModel
+import src.utility_functions as dps_uf
 
 class GEN(DAEModel):
     def __init__(self, *args, **kwargs):
@@ -124,13 +124,14 @@ class GEN(DAEModel):
         X = self.local_view(x)
         p = self.par
 
-        T_m = self.P_m(x, v)/(1 + X['speed'])
         P_e = self.p_e(x, v)
-
         PF_n = p['PF_n'] if 'PF_n' in p.dtype.names else 1
+
+        dTau = (self.P_m(x, v)-P_e/PF_n)/(1 + X['speed'])
+
         H = p['H']/PF_n
 
-        dX['speed'][:] = 1 / (2 * H) * (T_m - P_e/PF_n - p['D'] * X['speed'])
+        dX['speed'][:] = 1 / (2 * H) * (dTau - p['D'] * X['speed'])
         dX['angle'][:] = X['speed'] * 2 * np.pi * self.sys_par['f_n']
         dX['e_q_t'][:] = 1 / (p['T_d0_t']) * (self.E_f(x, v) + self.v_aux(x, v) - X['e_q_t'] - self.i_d(x, v) * (p['X_d'] - p['X_d_t']))
         dX['e_d_t'][:] = 1 / (p['T_q0_t']) * (-X['e_d_t'] + self.i_q(x, v) * (p['X_q'] - p['X_q_t']))

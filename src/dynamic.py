@@ -1,7 +1,7 @@
 import numpy as np
 
-import tops.utility_functions as dps_uf
-import tops.dyn_models as mdl_lib
+import src.utility_functions as dps_uf
+import src.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.sparse import diags as sp_diags

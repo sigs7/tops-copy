@@ -2,13 +2,13 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import tops.dynamic as dps
-import tops.solvers as dps_sol
+import src.dynamic as dps
+import src.solvers as dps_sol
 import importlib
 importlib.reload(dps)
 
 # region Model loading and initialisation stage
-from tops.ps_models import one_vsc_ib as model_data
+from src.ps_models import one_vsc_ib as model_data
 model = model_data.load()
 ps = dps.PowerSystemModel(model=model)  # Load into a PowerSystemModel object
 
@@ -75,7 +75,7 @@ result = pd.DataFrame(result_dict, columns=pd.MultiIndex.from_tuples(result_dict
 
 ## Here comes animation
 
-from tops.anim import Player
+from src.anim import Player
 oscillators = np.hstack((np.array(I_stored),np.array(v_stored),np.array(v_bus)))
 
 def update(frame):
