@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import control as ctrl
 from matplotlib.patches import Arc
 import numpy as np
 
@@ -243,3 +244,108 @@ def update_phasor_diagram(P, Q, Vs, Xd, Xd_t, Xq, Xt, Xl):
     ylim = (min(np.imag(value) for value in phasors.values())*1.2,max(np.imag(value) for value in phasors.values())*1.2)    
 
     plot_phasor_diagram(phasors, ylim=ylim, xlim=xlim)
+
+
+
+
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------  Small distrubance utils  --------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------
+"""
+
+def getPhasorsDictionary_SmallDist(P, Q, Vs, Xd, Xd_t, Xq, Xt, Xl):
+    # Recalculate the variables based on the slider values
+    I = (P - 1j*Q) / Vs
+    phi = np.abs(np.angle(I))
+    Vt = Vs + I * 1j*(Xl)
+    Vg = Vs + I * 1j*(Xt + Xl)
+    xq = Xq + Xt + Xl
+    xd = Xd + Xt + Xl
+    xd_t = Xd_t + Xt + Xl
+    EQ = Vs + I*1j*(xq)
+    delta = np.angle(EQ)
+    beta = delta + phi
+    Id_m = np.abs(I)*np.sin(beta)
+    Iq_m = np.abs(I)*np.cos(beta)
+    Id = Id_m * np.exp(1j*(delta - np.pi/2))
+    Iq = Iq_m * np.exp(1j*(delta))
+    Eq = Vg + Id*1j*(Xd) + Iq*1j*Xq
+    Eq_t = Vs + Id*1j*(xd_t) + Iq*1j*xq
+
+    phasors = {
+        'Vs': Vs,
+        'Vt': Vt,
+        'Vg': Vg,
+        'Eq': Eq,
+        'Eq_t': Eq_t,
+        'I': I,
+        'Id': Id,
+        'Iq': Iq
+    }
+    return phasors
+
+
+# Define the function to calculate eigenvalues
+def calculate_eigenvalues(H, D, K_E_t, f_N):
+    A = np.array([[0, 2 * np.pi * f_N],
+                  [-K_E_t / (2 * H), -D / (2 * H)]])
+    eigenvalues = np.linalg.eigvals(A)
+    return eigenvalues
+
+# Define the function to plot the root locus
+def plot_root_locus(H, D, K_E_t, f_N):
+    eigenvalues = calculate_eigenvalues(H, D, K_E_t, f_N)
+    
+    plt.figure(figsize=(10, 6))
+    plt.scatter(eigenvalues.real, eigenvalues.imag, color='red')
+    plt.axhline(0, color='black', lw=0.5)
+    plt.axvline(0, color='black', lw=0.5)
+    plt.xlabel('Real Part')
+    plt.ylabel('Imaginary Part')
+    plt.xlim(-4, 1)
+    plt.ylim(-15, 15)
+    plt.title('Root Locus')
+    plt.grid(True)
+    
+    # Annotate damping and frequency
+    for eig in eigenvalues:
+        damping = -eig.real / np.sqrt(eig.real**2 + eig.imag**2) * 100
+        frequency = np.abs(eig.imag) / (2 * np.pi)
+        plt.annotate(f'{damping:.2f} %, {frequency:.2f} Hz', (eig.real, eig.imag), textcoords="offset points", xytext=(10,-10), ha='center')
+    # Mark the area 0.1-2 Hz and below 10% damping indicating electromechanical modes
+    freq_range = np.linspace(0.1, 2, 1000)
+    damping_ratio = 0.1
+    real_part = -damping_ratio * 2 * np.pi * freq_range
+    imag_part = 2 * np.pi * freq_range * np.sqrt(1 - damping_ratio**2)
+    plt.fill_betweenx(imag_part, real_part, 0, color='yellow', alpha=0.3, label='Electromechanical Modes (0.1-2 Hz, <10% damping)')
+    plt.fill_betweenx(-imag_part, real_part, 0, color='yellow', alpha=0.3)
+    plt.legend()
+    
+    plt.show()
+
+def calculate_open_loop_transfer_function(H, D, w_N, K_E_t):
+    return ctrl.TransferFunction([1, 0], [2*H, D, w_N*K_E_t], name='Open Loop')
+
+def calculate_governor_transfer_function(Tw, Kgov):
+    return Kgov * ctrl.TransferFunction([-Tw, 1], [0.5*Tw, 1], name='GOV')
+
+def calculate_combined_transfer_function(H_OL, GOV):
+    return ctrl.TransferFunction(H_OL * GOV, name='Open Loop with Governor')
+
+def plot_bode_response(H_OL, H_OLwithGOV):
+    plt.figure(figsize=(12, 6))
+    ctrl.bode_plot(H_OL, dB=True, label='Open Loop', display_margins=False)
+    ctrl.bode_plot(H_OLwithGOV, dB=True, display_margins=True)
+    plt.legend(['Open Loop', 'Open Loop with Governor'])
+    plt.show()
+
+def update_plots_small_signal(Tw, Kgov, H, D, w_N, K_E_t):
+    H_OL = calculate_open_loop_transfer_function(H, D, w_N, K_E_t)
+    GOV = calculate_governor_transfer_function(Tw, Kgov)
+    H_OLwithGOV = calculate_combined_transfer_function(H_OL, GOV)
+    
+    plot_bode_response(H_OL, H_OLwithGOV)
+
