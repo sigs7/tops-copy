@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import control as ctrl
 from matplotlib.patches import Arc
 import numpy as np
-
+from scipy.integrate import quad
+from scipy.optimize import fsolve
+from ipywidgets import interact, FloatSlider
 
 
 """
@@ -326,6 +328,66 @@ def plot_root_locus(H, D, K_E_t, f_N):
     
     plt.show()
 
+
+'''
+------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------  Large disturbance utils  --------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------
+'''
+# Define the power curve function
+def power_curve(delta, P_m, E, Vs, x_dt):
+    return np.sin(delta) * (abs(E) * abs(Vs)) / x_dt
+
+# Define the integrate power curve function
+def integrate_power_curve(delta_start, delta_end, P_m, E, Vs, x_dt):
+    result, _ = quad(power_curve, delta_start, delta_end, args=(P_m, E, Vs, x_dt))
+    return result
+
+# Function to find delta_0 where power curve intersects with P_m
+def find_delta_0(P_m, E, Vs, x_dt):
+    func = lambda delta: power_curve(delta, P_m, E, Vs, x_dt) - P_m
+    delta_0 = fsolve(func, 0)[0]
+    return delta_0
+
+# Function to find delta_end where power curve intersects with P_m after delta_clear
+def find_delta_end(delta_clear, P_m, E, Vs, x_dt):
+    func = lambda delta: power_curve(delta, P_m, E, Vs, x_dt) - P_m
+    delta_end = fsolve(func, np.pi)[0]  # Start the search from delta_clear + 0.1
+    return delta_end
+
+# Function to update the plot
+def update_plot(delta_clear, P_m, P_e_sc, E, Vs, x_dt):
+    delta_0 = find_delta_0(P_m, E, Vs, x_dt)
+    delta_end = find_delta_end(delta_clear, P_m, E, Vs, x_dt)
+    delta = np.linspace(0, np.pi, 1000)
+    power = power_curve(delta, P_m, E, Vs, x_dt)
+    
+    A_1 = (P_m-P_e_sc) * (delta_clear - delta_0)
+    A_2 = integrate_power_curve(delta_clear, delta_end, P_m, E, Vs, x_dt) - P_m * (delta_end - delta_clear)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(delta, power, label='Power Curve')
+    plt.axhline(P_m, color='gray', linestyle='--', label='P_m')
+    plt.axhline(P_e_sc, color='green', linestyle='--', label='P_e_sc')
+
+    
+    # Fill Area 1
+    plt.fill_between(delta, P_e_sc, P_m, where=(delta >= delta_0) & (delta <= delta_clear), color='blue', alpha=0.3, label='Area 1')
+    
+    # Fill Area 2
+    plt.fill_between(delta, P_m, power, where=(delta > delta_clear) & (delta <= delta_end), color='green', alpha=0.3, label='Area 2')
+    
+    plt.axvline(delta_clear, color='red', linestyle='--', label='Delta Clear')
+    plt.axvline(delta_end, color='orange', linestyle='--', label='Delta End')
+    plt.xlabel('Delta [rad]')
+    plt.ylabel('Power')
+    plt.legend()
+    plt.title(f'Power Curve with Areas A_1 and A_2\nA_1: {A_1:.2f}, A_2: {A_2:.2f}')
+    plt.show()
+
+
+
+
 def calculate_open_loop_transfer_function(H, D, w_N, K_E_t):
     return ctrl.TransferFunction([1, 0], [2*H, D, w_N*K_E_t], name='Open Loop')
 
@@ -349,3 +411,8 @@ def update_plots_small_signal(Tw, Kgov, H, D, w_N, K_E_t):
     
     plot_bode_response(H_OL, H_OLwithGOV)
 
+def calc_damping_and_freq(eigenvalue):
+    damping = -eigenvalue.real / np.sqrt(eigenvalue.real**2 + eigenvalue.imag**2) * 100
+    frequency = np.abs(eigenvalue.imag) / (2 * np.pi)
+    print(f'Damping of eigenvalue {eigenvalue} is: {damping:.2f} % and frequency: {frequency:.2f} Hz')
+    return damping, frequency
