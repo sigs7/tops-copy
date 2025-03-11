@@ -7,6 +7,7 @@ import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.colors import LinearSegmentedColormap
 
+
 class EigenSweep:
     def __init__(self, eigenvalues_list, participation_factors_list, state_desc, parameter_values):
         self.eigenvalues_list = eigenvalues_list
@@ -94,6 +95,8 @@ class EigenSweep:
 
     def run(self):
         self.root.mainloop()
+
+
 def main():
     import casestudies.ps_data.k2a_regulated as model_data
 
@@ -103,17 +106,16 @@ def main():
     # Define the parameter values to sweep
     parameter_values = np.linspace(3,10,10)  # Example parameter values
 
+    model = model_data.load()
+    ps = dps.PowerSystemModel(model=model)
+    ps.init_dyn_sim()
+    ps_lin = dps_mdl.PowerSystemModelLinearization(ps)
+
     for param in parameter_values:
         # Set the parameter value in the power system model
-
-        model = model_data.load()
-        ps = dps.PowerSystemModel(model=model)
-
-        ps.init_dyn_sim()
-
         ps.gen['GEN'].par['H'] = param
 
-        ps_lin = dps_mdl.PowerSystemModelLinearization(ps)
+        # Linearize
         ps_lin.linearize()
         ps_lin.eigenvalue_decomposition()
 
@@ -123,6 +125,7 @@ def main():
 
     plotter = EigenSweep(eigenvalues_list, participation_factors_list, ps.state_desc, parameter_values)
     plotter.run()
+
 
 if __name__ == '__main__':
     main()
