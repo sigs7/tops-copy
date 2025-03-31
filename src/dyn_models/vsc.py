@@ -309,3 +309,128 @@ class VSC_PV(DAEModel):
         return self.s_e(x,v).imag
 
     # endregion
+
+
+class UIC(DAEModel):
+    """
+    Instantiate:
+    'vsc': {
+            'VSC_PQ': [
+                ['name', 'bus', 'S_n', 'p_ref', 'q_ref',  'k_p', 'k_q', 'T_p', 'T_q', 'k_pll','T_pll', 'T_i', 'i_max'],
+                ['VSC1', 'B1',    50,     1,       0,       1,      1,    0.1,   0.1,     5,      1,      0.01,    1.2],
+            ],
+        }
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+        self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+
+    # region Definitions
+
+    def load_flow_pq(self):
+        return self.bus_idx['terminal'], -self.par['p_ref']*self.par['S_n'], -self.par['q_ref']*self.par['S_n']
+
+    def int_par_list(self):
+        return ['f']
+
+    def bus_ref_spec(self):
+        return {'terminal': self.par['bus']}
+
+    # endregion
+
+    def state_list(self):
+        """
+        All states in pu.
+        vix: x-axis internal voltage
+        viy: y-axis internal voltage
+        """
+        return ['vix', 'viy']
+
+    def input_list(self):
+        """
+        All values in pu.
+
+        p_ref: outer loop active power setpoint
+        q_ref: outer loop reactive power setpoint
+        """
+        return ['p_ref', 'q_ref']
+
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        X = self.local_view(x)
+        par = self.par
+        v_t = self.v_t(x, v)
+        v_i = X['vix'] + 1j*X['viy']
+        ia = (v_i-v_t)/(1j*self.par['xf'])
+        s_ref = self.p_ref(x,v) + 1j*self.q_ref(x, v)
+
+        i_ref = np.conj(s_ref/v_i)
+        i_err = i_ref - ia
+        dvi = i_err*1j*par['Ki']*100*np.pi
+
+        dX['vix'][:] = np.real(dvi)
+        dX['viy'][:] = np.imag(dvi)
+        return
+
+    def init_from_load_flow(self, x_0, v_0, S):
+        X = self.local_view(x_0)
+
+        pref = self.par['p_ref']
+        qref = self.par['q_ref']
+        self._input_values['p_ref'] = pref
+        self._input_values['q_ref'] = qref
+
+        v0 = v_0[self.bus_idx_red['terminal']]
+        s = pref + 1j*qref
+        i0 =  np.conj(s/v0)
+        vi0 = v0 + 1j*i0*self.par['xf']
+        X['vix'] = np.real(vi0)
+        X['viy'] = np.imag(vi0)
+
+    def current_injections(self, x, v):
+        i_n_r = self.par['S_n'] / self.sys_par['s_n']
+        return self.bus_idx_red['terminal'], self.i_inj(x, v) * i_n_r
+
+    def dyn_const_adm(self):
+        idx_bus = self.bus_idx['terminal']
+        bus_v_n = self.sys_par['bus_v_n'][idx_bus]
+        z_n = bus_v_n ** 2 / self.sys_par['s_n']
+
+        impedance_pu_gen = 1j * self.par['xf']
+        impedance = impedance_pu_gen * self.par['V_n'] ** 2 / self.par['S_n'] / z_n
+        Y = 1 / impedance
+        return Y, (idx_bus,)*2
+
+    # region Utility methods
+    def i_inj(self, x, v):
+        X = self.local_view(x)
+        vi = X['vix'] + 1j*X['viy']
+        xf = self.par['xf']
+
+        return vi/(1j*xf)
+
+    def v_t(self, x, v):
+
+        return v[self.bus_idx_red['terminal']]
+
+    def ia(self, x, v):
+        X = self.local_view(x)
+        v_t = self.v_t(x, v)
+        v_i = X['vix'] + 1j*X['viy']
+        return (v_i-v_t)/(1j*self.par['xf'])
+
+    def s_e(self, x, v):
+        # Apparent power in p.u. (generator base units)
+        return self.v_t(x, v)*np.conj(self.i_inj(x, v))
+
+    def v_q(self,x,v):
+        return (self.v_t(x,v)*np.exp(-1j*self.local_view(x)['angle'])).imag
+    def p_e(self, x, v):
+        return self.s_e(x,v).real
+
+    def q_e(self, x, v):
+        return self.s_e(x,v).imag
+
+    # endregion
