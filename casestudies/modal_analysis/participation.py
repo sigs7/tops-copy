@@ -97,7 +97,7 @@ class EigenvaluePlotter:
 
 
 def main():
-    import casestudies.ps_data.k2a_regulated as model_data
+    import casestudies.ps_data.test_UIC as model_data
     model = model_data.load()
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
@@ -105,6 +105,10 @@ def main():
     ps_lin = dps_mdl.PowerSystemModelLinearization(ps)
     ps_lin.linearize()
     ps_lin.eigenvalue_decomposition()
+    
+    print("Eigenvalues:")
+    for i, eig in enumerate(ps_lin.eigs):
+        print(f"  {i}: {eig.real:12.6f} + {eig.imag:12.6f}j")
 
     plotter = EigenvaluePlotter(ps_lin)
     plotter.run()

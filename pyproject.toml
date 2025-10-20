@@ -27,3 +27,6 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[tool.setuptools]
+packages = ["src", "src.dyn_models", "casestudies", "casestudies.ps_data", "casestudies.dyn_sim", "casestudies.modal_analysis"]

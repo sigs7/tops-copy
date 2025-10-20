@@ -1,5 +1,6 @@
 from src.dyn_models.blocks import *
 from .pll import PLL1
+from .UIC import UIC_sig
 
 class VSC(DAEModel):
     def __init__(self, *args, **kwargs):

@@ -66,7 +66,7 @@ def test_vsc():
         print(f"  - Initial error: {float(vsc._input_values['i_ref'] - initial_current):.4f} pu")
         
         # Run simulation
-        t_end = 5.0
+        t_end = 3.0
         dt = 0.01
         
         # Create solver functions
@@ -125,7 +125,6 @@ def test_vsc():
         plt.subplot(3, 1, 1)
         plt.plot(time, current_history, 'b-', linewidth=2, label='Current')
         plt.axhline(y=0, color='r', linestyle='--', label='Reference (0)')
-        plt.xlabel('Time (s)')
         plt.ylabel('Current (pu)')
         plt.title('VSC Current Response (i_ref=0, e>0 at t=0)')
         plt.legend()
@@ -134,7 +133,6 @@ def test_vsc():
         plt.subplot(3, 1, 2)
         plt.plot(time, error_history, 'r-', linewidth=2, label='Error')
         plt.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-        plt.xlabel('Time (s)')
         plt.ylabel('Error (pu)')
         plt.title('VSC Error Response')
         plt.legend()
@@ -149,6 +147,17 @@ def test_vsc():
         plt.grid(True)
         
         plt.tight_layout()
+        
+        # Save the plot in a testing folder
+        import os
+        testing_folder = "testing"
+        if not os.path.exists(testing_folder):
+            os.makedirs(testing_folder)
+        
+        plot_filename = os.path.join(testing_folder, "vsc_current_respons_i_ref_0.png")
+        plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: {plot_filename}")
+        
         plt.show()
         
         # Calculate settling time (2% tolerance)
