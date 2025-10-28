@@ -19,6 +19,7 @@ class UIC_sig(DAEModel):
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+        
 
     def load_flow_pv(self):
         return self.bus_idx['terminal'], -self.par['p_ref']*self.par['S_n'], self.par['v_ref']
@@ -31,42 +32,38 @@ class UIC_sig(DAEModel):
     
     def state_list(self):
         """Return list of states for this VSC"""
-        return ['vi_x', 'vi_y', 'omega_i']
+        return ['vi_x', 'vi_y']
 
     def input_list(self):
         """Input list for VSC"""
-        return ['p_ref', 'q_ref', 'v_ref', 'omega_0']
+        return ['p_ref', 'q_ref', 'v_ref']
 
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
         X = self.local_view(x)
         par = self.par
-        s_ref = self._input_values['p_ref'] + 1j*self._input_values['q_ref']
-        v_ref = self._input_values['v_ref']
+        s_ref = self.p_ref(x, v) + 1j*self.q_ref(x, v)
+        v_ref = self.v_ref(x, v)
         v_t = v[self.bus_idx_red['terminal']]
         vi = X['vi_x'] + 1j*X['vi_y']
-        # Store v_t_initial only on first iteration
-        if not hasattr(self, '_v_t_initial'):
-            self._v_t_initial = v_t
-        i_ref = np.conj(s_ref/self._v_t_initial)
-        
+       
+        i_ref = np.conj(s_ref/v_t)
         i_a = self.i_a(x, v)
-        i_error = i_ref - i_a
-        v_error = v_ref - abs(vi)
+        theta = np.angle(vi, deg=False)
         
-        # Initialize last_angle if it doesn't exist
-        if not hasattr(self, '_last_angle'):
-            self._last_angle = np.angle(vi, deg=False)
-        
-        angle = np.angle(vi, deg=False)
-        omega_0 = self._input_values['omega_0']
-        ddelta = angle - self._last_angle
-        self._last_angle = angle
-        dt = getattr(self, 'dt', 5e-3)  # Use provided dt or default to 5e-3
-        omega_i = ddelta / dt
-        domega = omega_0 - omega_i
+        i_error = (i_ref - i_a)
+        v_error = (v_ref - abs(vi))*np.exp(1j*(theta))
 
-        dvi = (1j*par['Ki']*i_error+par['Kv']*v_error-1j*domega*vi)
+        dvi = 1j*100*np.pi*par['Ki']*i_error+100*np.pi*par['Kv']*v_error 
+        
+        if self.par['perfect_tracking']:
+            delta_omega = ((dX['vi_x']+1j*dX['vi_y'])/(X['vi_x']+1j*X['vi_y'])).imag
+            filter = TimeConstant(T=par['T_filter'])
+            filter.input = lambda x, v: delta_omega 
+            delta_omega_filtered = filter.output(x, v)
+            perfect_tracking_addition = 1j*(X['vi_x']+1j*X['vi_y'])*delta_omega_filtered
+            dvi += perfect_tracking_addition
+
         dX['vi_x'][:] = np.real(dvi)
         dX['vi_y'][:] = np.imag(dvi)
 
@@ -79,6 +76,8 @@ class UIC_sig(DAEModel):
             print('  X[vi_x]:', X['vi_x'])
             print('  X[vi_y]:', X['vi_y'])
             print('vi: ', vi)
+            print('theta: ', theta)
+            print('v_t: ', v_t)
             print('  p_ref:', s_ref.real)
             print('  q_ref:', s_ref.imag)
             print('p_e: ', self.p_e(x, v))
@@ -86,18 +85,13 @@ class UIC_sig(DAEModel):
             print('  v_ref:', v_ref)
             print('  i_ref:', i_ref)
             print('i_a: ', self.i_a(x, v))
-            print('omega_i: ', omega_i)
-            print('omega_0: ', omega_0)
-            print('  angle: ', angle)
             print('i_inj: ', self.i_inj(x, v))
-            #print('theta: ', theta)
             print('dvi: ', dvi)
             print('dX[vi_x]:', dX['vi_x'])
             print('dX[vi_y]:', dX['vi_y'])
             print('v_error: ', v_error)
             print('i_error: ', i_error)
-            print('domega: ', domega)
-            #print('vi_angle: ', vi_angle)
+            #print('perfect_tracking_addition: ', perfect_tracking_addition)
 
         return
 
@@ -125,7 +119,6 @@ class UIC_sig(DAEModel):
         self._input_values['v_ref'] = abs(vi)
         self._input_values['p_ref'] = S.real
         self._input_values['q_ref'] = S.imag
-        self._input_values['omega_0'] = 0.0
         
         X['vi_x'] = np.real(vi)
         X['vi_y'] = np.imag(vi)
@@ -138,7 +131,6 @@ class UIC_sig(DAEModel):
         print('q_e init', self.q_e(x_0, v_0))
         print('v_ref init', abs(vi))
         print('v_t init', v_t)
-        print('omega_0 init', self._input_values['omega_0'])
         return
 
     def dyn_const_adm(self):
@@ -151,6 +143,9 @@ class UIC_sig(DAEModel):
     def v_t(self, x, v):
         """Terminal voltage"""
         return v[self.bus_idx_red['terminal']]
+
+    def v_q(self,x,v):
+        return (self.v_t(x,v)*np.exp(-1j*self.local_view(x)['angle'])).imag
     
     def i_a(self, x, v):
         par = self.par

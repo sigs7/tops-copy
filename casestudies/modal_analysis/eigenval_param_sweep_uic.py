@@ -98,13 +98,13 @@ class EigenSweep:
 
 
 def main():
-    import casestudies.ps_data.uic_ib as model_data
+    import casestudies.ps_data.uic_ib_sig as model_data
 
     eigenvalues_list = []
     participation_factors_list = []
 
     # Define the parameter values to sweep
-    parameter_values = np.linspace(0.005,0.05,10)  # Example parameter values
+    parameter_values = np.linspace(0.1,1,10)  # Example parameter values
 
     model = model_data.load()
     ps = dps.PowerSystemModel(model=model)
@@ -113,7 +113,7 @@ def main():
 
     for param in parameter_values:
         # Set the parameter value in the power system model
-        ps.vsc['UIC'].par['Ki'] = param
+        ps.vsc['UIC_sig'].par['Ki'] = param
 
         # Linearize
         ps_lin.linearize()
