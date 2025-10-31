@@ -53,7 +53,8 @@ if __name__ == '__main__':
     # change these for events
     short_circuit_flag = False 
     freq_response_flag = True 
-    
+
+    perfect_tracking = ps.vsc['UIC_sig'].par['perfect_tracking']
     frequency_change = False
     sc_bus_idx = ps.vsc['UIC_sig'].bus_idx_red['terminal'][0]
     # endregion
@@ -145,6 +146,10 @@ if __name__ == '__main__':
         events.append('short_circuit')
     if freq_response_flag:
         events.append('freq_change')
+    # Check if perfect_tracking is enabled (handle both array and scalar)
+    perfect_tracking_enabled = perfect_tracking.any() if hasattr(perfect_tracking, 'any') else bool(perfect_tracking)
+    if perfect_tracking_enabled:
+        events.append('perfect_tracking')
     event_suffix = '_with_' + '_and_'.join(events) if events else '_no_disturbance'
     suffix = f'_{model_name}{event_suffix}'
     
@@ -186,4 +191,6 @@ if __name__ == '__main__':
     filename2 = f'testing/uic_sig_references_vs_actual{suffix}.png'
     plt.savefig(filename2, dpi=300, bbox_inches='tight')
     print(f'Plot saved to: {filename2}')
+    
+    plt.show()
     # endregion

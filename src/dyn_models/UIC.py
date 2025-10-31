@@ -32,7 +32,7 @@ class UIC_sig(DAEModel):
     
     def state_list(self):
         """Return list of states for this VSC"""
-        return ['vi_x', 'vi_y']
+        return ['vi_x', 'vi_y', 'x_filter']
 
     def input_list(self):
         """Input list for VSC"""
@@ -54,24 +54,20 @@ class UIC_sig(DAEModel):
         i_error = (i_ref - i_a)
         v_error = (v_ref - abs(vi))*np.exp(1j*(theta))
 
-        dvi = 1j*100*np.pi*par['Ki']*i_error+100*np.pi*par['Kv']*v_error 
+        dvi = 1j*100*np.pi*par['Ki']*i_error+100*np.pi*par['Kv']*v_error +1j*vi*X['x_filter']*par['perfect_tracking']
         
-        if self.par['perfect_tracking']:
-            delta_omega = ((dX['vi_x']+1j*dX['vi_y'])/(X['vi_x']+1j*X['vi_y'])).imag
-            filter = TimeConstant(T=par['T_filter'])
-            filter.input = lambda x, v: delta_omega 
-            delta_omega_filtered = filter.output(x, v)
-            perfect_tracking_addition = 1j*(X['vi_x']+1j*X['vi_y'])*delta_omega_filtered
-            dvi += perfect_tracking_addition
-
-        dX['vi_x'][:] = np.real(dvi)
-        dX['vi_y'][:] = np.imag(dvi)
-
+        delta_omega = (dvi/vi).imag
+        dX['x_filter'] = (1/par['T_filter'])*(delta_omega-X['x_filter'])
+        perfect_tracking_addition = 1j*vi*X['x_filter']*par['perfect_tracking']
+        
+        dX['vi_x'] = np.real(dvi)
+        dX['vi_y'] = np.imag(dvi)
+        
         # Debug
         if not hasattr(self, '_debug_counter'):
             self._debug_counter = 0
         self._debug_counter += 1
-        if self._debug_counter == 1 or self._debug_counter == 100 or self._debug_counter == 500 or self._debug_counter == 1000 or (self._debug_counter % 5000 == 0 and self._debug_counter <= 60000): 
+        if self._debug_counter == 1 or self._debug_counter == 7500 or self._debug_counter == 100 or self._debug_counter == 500 or self._debug_counter == 1000 or (self._debug_counter % 5000 == 0 and self._debug_counter <= 60000): 
             print('Debug values (iteration', self._debug_counter, '):')
             print('  X[vi_x]:', X['vi_x'])
             print('  X[vi_y]:', X['vi_y'])
@@ -91,6 +87,10 @@ class UIC_sig(DAEModel):
             print('dX[vi_y]:', dX['vi_y'])
             print('v_error: ', v_error)
             print('i_error: ', i_error)
+            print('x_filter: ', X['x_filter'])
+            print('delta_omega: ', delta_omega)
+            print('dX[x_filter]:', dX['x_filter'])
+            print('perfect_tracking_addition: ', perfect_tracking_addition)
             #print('perfect_tracking_addition: ', perfect_tracking_addition)
 
         return
@@ -122,6 +122,7 @@ class UIC_sig(DAEModel):
         
         X['vi_x'] = np.real(vi)
         X['vi_y'] = np.imag(vi)
+        X['x_filter'] = 0.0
 
         print('vi_x init', X['vi_x'])
         print('vi_y init', X['vi_y'])
