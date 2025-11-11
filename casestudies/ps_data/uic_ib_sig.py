@@ -25,15 +25,14 @@ def load():
         'vsc': {
             'UIC_sig': [
                 ['name', 'bus', 'S_n', 'v_ref', 'p_ref', 'q_ref',   'Ki',   'Kv',    'xf', 'perfect_tracking', 'T_filter'],
-                ['UIC1', 'B2',    1,      1.0,     1.0,      0.5,    0.1,     0.1,    0.001,        0,          0.1   ] # enable perfect tracking: 1, else 0
+                ['UIC1', 'B2',    1,      1.0,     1.0,      0.5,    0.1,     0.1,    0.001,        1,          0.1   ] # enable perfect tracking: 1, else 0
             ],
         }, 
 
         'loads': [
             ['name',    'bus',  'P',    'Q',    'model'],
             ['L1',      'B2',   1,    0.5,    'Z'],
-        ],
-
+        ]
     }
 
 """ 'vsc': {

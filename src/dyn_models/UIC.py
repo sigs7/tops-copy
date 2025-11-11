@@ -1,16 +1,3 @@
-"""  
-Goal: Model a VSC with UIC control (without angle state)
-
-1. Create a UIC-style VSC without PLL
-2. Uses stationary reference frame (no dq transformation)
-3. Simple grid-forming control
-
-- Use existing solvers
-- Use existing blocks
-- Differential equations are divided into steps (functions with different objectives)
-
-"""
-
 from .blocks import *
 
 class UIC_sig(DAEModel):
@@ -46,8 +33,8 @@ class UIC_sig(DAEModel):
         v_ref = self.v_ref(x, v)
         v_t = v[self.bus_idx_red['terminal']]
         vi = X['vi_x'] + 1j*X['vi_y']
-       
-        i_ref = np.conj(s_ref/v_t)
+
+        i_ref = np.conj(s_ref/vi) ############ FIKS vi
         i_a = self.i_a(x, v)
         theta = np.angle(vi, deg=False)
         
@@ -115,10 +102,11 @@ class UIC_sig(DAEModel):
         v_t = v_0[self.bus_idx_red['terminal']]
         current = np.conj(S/v_t)
         vi = v_t + 1j*current*par['xf']
+        S_internal = vi * np.conj(current)
 
         self._input_values['v_ref'] = abs(vi)
-        self._input_values['p_ref'] = S.real
-        self._input_values['q_ref'] = S.imag
+        self._input_values['p_ref'] = S_internal.real
+        self._input_values['q_ref'] = S_internal.imag
         
         X['vi_x'] = np.real(vi)
         X['vi_y'] = np.imag(vi)

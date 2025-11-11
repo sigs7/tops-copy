@@ -25,10 +25,10 @@ if __name__ == '__main__':
     x0 = ps.x0.copy()  # Initial states
 
     t = 0
-    t_freq_start = 15  # Time when frequency disturbance starts
+    t_freq_start = 5  # Time when frequency disturbance starts
     gen_speed_idx = ps.gen['GEN'].state_idx_global['speed'][0]  # IB speed index
     result_dict = defaultdict(list)
-    t_end = 30  # Simulation time
+    t_end = 20  # Simulation time
 
     # Solver
     sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x0, t_end, max_step=5e-3)
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     P_e_stored = []
     E_f_stored = []
     v_bus = []
-    I_stored = []
+    I_a_stored = []
     theta_stored = []
     p_ref_stored = []
     q_ref_stored = []
@@ -85,11 +85,8 @@ if __name__ == '__main__':
         result_dict['Global', 't'].append(sol.t)
         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
 
-        _, I_vsc = ps.vsc['UIC_sig'].current_injections(x, v)
-        I_stored.append(np.abs(I_vsc)) 
-        
-        v_t_vsc = ps.vsc['UIC_sig'].v_t(x, v)
-        v_bus.append(np.abs(v_t_vsc)) 
+        I_a = ps.vsc['UIC_sig'].i_a(x, v)
+        I_a_stored.append(np.abs(I_a)) 
         
         vsc_local = ps.vsc['UIC_sig'].local_view(x)
         vi_x = vsc_local['vi_x']
@@ -113,29 +110,34 @@ if __name__ == '__main__':
     # region Plotting
     t_stored = result[('Global', 't')]
 
-    fig, ax = plt.subplots(4)
-    fig.suptitle('UIC VSC: vi_x, vi_y, current, and theta')
-    ax[0].plot(t_stored, result.xs(key='vi_x', axis='columns', level=1), label='vi_x')
-    ax[0].plot(t_stored, result.xs(key='vi_y', axis='columns', level=1), label='vi_y')
+    # Determine plot title based on events and perfect tracking
+    perfect_tracking_enabled = perfect_tracking.any() if hasattr(perfect_tracking, 'any') else bool(perfect_tracking)
+    if freq_response_flag:
+        if perfect_tracking_enabled:
+            plot_title = 'UIC response to frequency event with perfect tracking'
+        else:
+            plot_title = 'UIC response to frequency event with droop control'
+    else:
+        plot_title = 'UIC steady state'
+
+    fig, ax = plt.subplots(3)
+    fig.suptitle(plot_title)
+    ax[0].plot(t_stored, result.xs(key='vi_x', axis='columns', level=1), label='vi_x', color='#FF1493')  # deeppink
+    ax[0].plot(t_stored, result.xs(key='vi_y', axis='columns', level=1), label='vi_y', color='blue')
     ax[0].legend()
     ax[0].set_ylabel('Controller states')
-    ax[0].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax[0].yaxis.set_major_formatter(FormatStrFormatter('%.5f'))
     
-    ax[1].plot(t_stored, np.array(I_stored), label='I_vsc')
+    ax[1].plot(t_stored, np.array(I_a_stored), label='I_a', color='#FF1493')  # deeppink
     ax[1].legend()
     ax[1].set_ylabel('VSC Current (pu)')
-    ax[1].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-
-    ax[2].plot(t_stored, np.array(v_bus), label='V_bus')
-    ax[2].legend()
-    ax[2].set_ylabel('Voltage (pu)')
-    ax[2].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax[1].yaxis.set_major_formatter(FormatStrFormatter('%.5f'))
     
-    ax[3].plot(t_stored, np.array(theta_stored)*180/np.pi, label='theta')
-    ax[3].legend()
-    ax[3].set_ylabel('Theta (degrees)')
-    ax[3].set_xlabel('Time (s)')
-    ax[3].yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax[2].plot(t_stored, np.array(theta_stored)*180/np.pi, label='theta', color='#FF1493')  # deeppink
+    ax[2].legend()
+    ax[2].set_ylabel('Voltage angle (deg)')
+    ax[2].set_xlabel('Time (s)')
+    ax[2].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
     
     # Save figure to testing folder with dynamic naming
     plt.tight_layout()
@@ -146,8 +148,6 @@ if __name__ == '__main__':
         events.append('short_circuit')
     if freq_response_flag:
         events.append('freq_change')
-    # Check if perfect_tracking is enabled (handle both array and scalar)
-    perfect_tracking_enabled = perfect_tracking.any() if hasattr(perfect_tracking, 'any') else bool(perfect_tracking)
     if perfect_tracking_enabled:
         events.append('perfect_tracking')
     event_suffix = '_with_' + '_and_'.join(events) if events else '_no_disturbance'
@@ -159,33 +159,32 @@ if __name__ == '__main__':
     
     # Create second figure with references
     fig2, ax2 = plt.subplots(3, figsize=(10, 8))
-    title_suffix = suffix.replace('_', ' ').replace('with', 'With').replace('and', 'And').title()
-    fig2.suptitle(f'UIC VSC: References vs Actual Values {title_suffix}')
+    fig2.suptitle(plot_title)
     
     # Plot 1: vi magnitude vs v_ref
-    ax2[0].plot(t_stored, np.array(vi_mag_stored), label='|vi| actual', linewidth=2)
-    ax2[0].plot(t_stored, np.array(v_ref_stored), '--', label='v_ref', linewidth=2)
+    ax2[0].plot(t_stored, np.array(vi_mag_stored), label='|vi| actual', linewidth=2, color='#FF1493')  # deeppink
+    ax2[0].plot(t_stored, np.array(v_ref_stored), '--', label='v_ref', linewidth=2, color='blue')
     ax2[0].legend()
     ax2[0].set_ylabel('Voltage magnitude (pu)')
     ax2[0].grid(True)
-    ax2[0].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax2[0].yaxis.set_major_formatter(FormatStrFormatter('%.5f'))
     
     # Plot 2: P vs p_ref
-    ax2[1].plot(t_stored, np.array(P_actual_stored), label='P actual', linewidth=2)
-    ax2[1].plot(t_stored, np.array(p_ref_stored), '--', label='p_ref', linewidth=2)
+    ax2[1].plot(t_stored, np.array(P_actual_stored), label='P actual', linewidth=2, color='#FF1493')  # deeppink
+    ax2[1].plot(t_stored, np.array(p_ref_stored), '--', label='p_ref', linewidth=2, color='blue')
     ax2[1].legend()
     ax2[1].set_ylabel('Active power (pu)')
     ax2[1].grid(True)
-    ax2[1].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax2[1].yaxis.set_major_formatter(FormatStrFormatter('%.5f'))
     
     # Plot 3: Q vs q_ref
-    ax2[2].plot(t_stored, np.array(Q_actual_stored), label='Q actual', linewidth=2)
-    ax2[2].plot(t_stored, np.array(q_ref_stored), '--', label='q_ref', linewidth=2)
+    ax2[2].plot(t_stored, np.array(Q_actual_stored), label='Q actual', linewidth=2, color='#FF1493')  # deeppink
+    ax2[2].plot(t_stored, np.array(q_ref_stored), '--', label='q_ref', linewidth=2, color='blue')
     ax2[2].legend()
     ax2[2].set_ylabel('Reactive power (pu)')
     ax2[2].set_xlabel('Time (s)')
     ax2[2].grid(True)
-    ax2[2].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax2[2].yaxis.set_major_formatter(FormatStrFormatter('%.5f'))
     
     plt.tight_layout()
     filename2 = f'testing/uic_sig_references_vs_actual{suffix}.png'
