@@ -10,3 +10,4 @@ from . import utils
 from . import pll
 from . import vsc
 from . import UIC
+from . import windturbine

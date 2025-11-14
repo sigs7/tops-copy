@@ -34,7 +34,7 @@ class UIC_sig(DAEModel):
         v_t = v[self.bus_idx_red['terminal']]
         vi = X['vi_x'] + 1j*X['vi_y']
 
-        i_ref = np.conj(s_ref/vi) ############ FIKS vi
+        i_ref = np.conj(s_ref/vi) 
         i_a = self.i_a(x, v)
         theta = np.angle(vi, deg=False)
         
